@@ -22,7 +22,9 @@ target_metadata = Base.metadata
 
 # Get database URL from settings
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
+# Escape % for configparser by doubling it
+db_url = settings.database_url_sync.replace('%', '%%')
+config.set_main_option("sqlalchemy.url", db_url)
 
 
 def run_migrations_offline() -> None:
