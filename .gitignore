@@ -1,0 +1,80 @@
+# ---------------------------------------------------------------------------
+# Secrets & environment — NEVER commit these
+# ---------------------------------------------------------------------------
+.env
+.env.*
+*.env
+.env.local
+.env.*.local
+# Keep the example templates so others know what vars are needed
+!.env.example
+!.env.local.example
+
+# ---------------------------------------------------------------------------
+# Databases & user data
+# ---------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Uploaded user content (PDFs, generated reports) — may contain personal data
+uploads/
+backend/uploads/
+!**/uploads/.gitkeep
+!**/uploads/**/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+backend/venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+
+# ---------------------------------------------------------------------------
+# Build outputs
+# ---------------------------------------------------------------------------
+frontend/.next/
+frontend/out/
+frontend/dist/
+backend/dist/
+build/
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Testing / coverage
+# ---------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage/
+htmlcov/
+.tox/
+
+# ---------------------------------------------------------------------------
+# IDE / OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Logs / misc
+# ---------------------------------------------------------------------------
+*.log
+.logs/
+.cache/
+temp/
+tmp/

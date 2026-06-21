@@ -1,0 +1,58 @@
+"""Security headers middleware."""
+
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+from app.core.config import get_settings
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+        
+        # Prevent MIME type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        
+        # Enable XSS protection
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        
+        # Referrer policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        
+        # Content Security Policy
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "connect-src 'self';"
+        )
+        
+        # Permissions policy
+        response.headers["Permissions-Policy"] = (
+            "accelerometer=(), "
+            "camera=(), "
+            "geolocation=(), "
+            "gyroscope=(), "
+            "magnetometer=(), "
+            "microphone=(), "
+            "payment=(), "
+            "usb=()"
+        )
+        
+        # Strict transport security — only meaningful over HTTPS, so enable it
+        # in production where the app is served over TLS. Sending HSTS on a
+        # plaintext dev server would wrongly pin localhost to HTTPS.
+        if get_settings().is_production:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains; preload"
+            )
+
+        return response
