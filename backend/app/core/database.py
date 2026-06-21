@@ -28,6 +28,16 @@ if not _is_sqlite(settings.database_url):
         "pool_size": 10,
         "max_overflow": 20,
     })
+    # Supabase / PgBouncer compatibility: connection poolers (especially the
+    # transaction-mode pooler on port 6543) don't support server-side prepared
+    # statements, which asyncpg uses by default. Disabling the statement cache
+    # avoids "prepared statement does not exist" / DuplicatePreparedStatement
+    # errors. Harmless on session-mode poolers and direct connections.
+    if "asyncpg" in settings.database_url:
+        async_engine_kwargs["connect_args"] = {
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+        }
 
 async_engine = create_async_engine(
     settings.database_url,
