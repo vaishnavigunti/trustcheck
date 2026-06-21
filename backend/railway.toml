@@ -1,0 +1,9 @@
+version: "2"
+services:
+  backend:
+    path: .
+    build:
+      dockerfile: Dockerfile
+    environment:
+      - APP_ENV=production
+      - DEBUG=false
