@@ -32,6 +32,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Allow authenticated users or public routes
   return NextResponse.next();
 }
 
