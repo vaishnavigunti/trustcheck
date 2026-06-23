@@ -36,9 +36,13 @@ class TokenResponse(BaseModel):
 
 
 class TokenRefreshRequest(BaseModel):
-    """Token refresh request."""
+    """Token refresh request.
 
-    refresh_token: str
+    refresh_token is optional: when omitted, the endpoint falls back to the
+    http-only refresh_token cookie (the normal browser flow).
+    """
+
+    refresh_token: Optional[str] = None
 
 
 class TokenPayload(BaseModel):

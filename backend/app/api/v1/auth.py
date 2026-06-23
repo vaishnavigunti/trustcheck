@@ -36,25 +36,29 @@ def set_auth_cookies(
     """Set authentication cookies."""
     settings = get_settings()
     is_production = settings.is_production
+    session_max_age = settings.refresh_token_expire_days * 24 * 60 * 60
 
-    # Access token cookie (short-lived, http-only)
+    # Access token cookie. Kept readable by the client (not http-only) and given
+    # the full session lifetime so it acts as a "session present" marker for the
+    # Next.js middleware/route guard. The actual access JWT inside still expires
+    # after access_token_expire_minutes; the client silently refreshes it.
     response.set_cookie(
         key="access_token",
         value=tokens.access_token,
-        httponly=True,
+        httponly=False,
         secure=is_production,  # True in production (HTTPS), False for local dev (HTTP)
         samesite="lax",
-        max_age=tokens.expires_in,
+        max_age=session_max_age,
     )
 
-    # Refresh token cookie (longer-lived, http-only)
+    # Refresh token cookie (http-only, only sent to the refresh endpoint)
     response.set_cookie(
         key="refresh_token",
         value=tokens.refresh_token,
         httponly=True,
         secure=is_production,
         samesite="lax",
-        max_age=7 * 24 * 60 * 60,  # 7 days
+        max_age=session_max_age,
         path="/api/v1/auth/refresh",  # Only sent to refresh endpoint
     )
 

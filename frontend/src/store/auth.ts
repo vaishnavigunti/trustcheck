@@ -45,6 +45,7 @@ interface AuthState {
   error: string | null;
   hasHydrated: boolean;
   accessToken: string | null;
+  refreshToken: string | null;
 
   // Actions
   login: (data: LoginRequest) => Promise<void>;
@@ -65,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       hasHydrated: false,
       accessToken: null,
+      refreshToken: null,
 
       // Hydration setter
       setHasHydrated: (value: boolean) => set({ hasHydrated: value }),
@@ -74,12 +76,18 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authApi.login(data);
-          set({
+          const newState = {
             user: response.user,
             isAuthenticated: true,
             isLoading: false,
             accessToken: response.tokens.access_token,
-          });
+            refreshToken: response.tokens.refresh_token,
+          };
+          set(newState);
+          // Set cookie for middleware
+          if (typeof document !== 'undefined') {
+            document.cookie = `access_token=${response.tokens.access_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+          }
         } catch (error: any) {
           set({
             error: extractErrorMessage(error, 'Login failed'),
@@ -94,12 +102,18 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authApi.register(data);
-          set({
+          const newState = {
             user: response.user,
             isAuthenticated: true,
             isLoading: false,
             accessToken: response.tokens.access_token,
-          });
+            refreshToken: response.tokens.refresh_token,
+          };
+          set(newState);
+          // Set cookie for middleware
+          if (typeof document !== 'undefined') {
+            document.cookie = `access_token=${response.tokens.access_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+          }
         } catch (error: any) {
           set({
             error: extractErrorMessage(error, 'Registration failed'),
@@ -117,12 +131,17 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           // Ignore logout errors
         } finally {
+          // Clear cookie
+          if (typeof document !== 'undefined') {
+            document.cookie = 'access_token=; path=/; max-age=0; SameSite=Lax';
+          }
           set({
             user: null,
             isAuthenticated: false,
             isLoading: false,
             error: null,
             accessToken: null,
+            refreshToken: null,
           });
         }
       },
@@ -158,6 +177,7 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

@@ -33,7 +33,12 @@ export default function ProfilePage() {
         setProfile(res.data);
         setFullName(res.data.full_name);
       } catch (err: any) {
-        console.error('Failed to load profile');
+        console.error('Failed to load profile', err);
+        // Redirect to login if not authenticated
+        if (err?.response?.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
       } finally {
         setIsLoading(false);
       }
