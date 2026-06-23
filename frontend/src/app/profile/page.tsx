@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useAuthStore } from '@/store/auth';
 import { api } from '@/lib/api';
+import { authApi } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
 
 interface UserProfile {
   id: string;
@@ -19,12 +21,19 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-  const { user: authUser } = useAuthStore();
+  const router = useRouter();
+  const { user: authUser, logout } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [fullName, setFullName] = useState('');
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -47,9 +56,6 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
-
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdating(true);
@@ -66,24 +72,38 @@ export default function ProfilePage() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setPasswordError(null);
+    setPasswordMessage(null);
+
     if (passwords.new !== passwords.confirm) {
-      setMessage('New passwords do not match');
+      setPasswordError('New passwords do not match');
       return;
     }
-    setIsUpdating(true);
-    setMessage(null);
+    if (passwords.new.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+
+    setIsChangingPassword(true);
     try {
-      await api.post('/auth/change-password', {
+      const result = await authApi.changePassword({
         current_password: passwords.current,
         new_password: passwords.new,
       });
-      setMessage('Password changed successfully');
+      setPasswordMessage(result.message || 'Password changed successfully');
       setShowPasswordForm(false);
       setPasswords({ current: '', new: '', confirm: '' });
+
+      // Backend clears cookies and revokes all refresh tokens — force re-login.
+      setTimeout(() => {
+        localStorage.removeItem('auth-storage');
+        document.cookie = 'access_token=; path=/; max-age=0; samesite=lax';
+        router.push('/login');
+      }, 2000);
     } catch (err: any) {
-      setMessage(err.response?.data?.detail || 'Failed to change password');
+      setPasswordError(err.response?.data?.detail || 'Failed to change password');
     } finally {
-      setIsUpdating(false);
+      setIsChangingPassword(false);
     }
   };
 
@@ -220,8 +240,18 @@ export default function ProfilePage() {
               <CardDescription>Manage your password</CardDescription>
             </CardHeader>
             <CardContent>
+              {passwordMessage && (
+                <div className="mb-3 p-3 text-sm rounded-md bg-green-100 text-green-800">
+                  {passwordMessage}
+                </div>
+              )}
+              {passwordError && (
+                <div className="mb-3 p-3 text-sm rounded-md bg-destructive/10 text-destructive">
+                  {passwordError}
+                </div>
+              )}
               {!showPasswordForm ? (
-                <Button variant="outline" className="w-full" onClick={() => setShowPasswordForm(true)}>
+                <Button variant="outline" className="w-full" onClick={() => { setPasswordError(null); setPasswordMessage(null); setShowPasswordForm(true); }}>
                   Change Password
                 </Button>
               ) : (
@@ -230,19 +260,19 @@ export default function ProfilePage() {
                     <input
                       key={field}
                       type="password"
-                      placeholder={field === 'current' ? 'Current password' : field === 'new' ? 'New password' : 'Confirm new password'}
+                      placeholder={field === 'current' ? 'Current password' : field === 'new' ? 'New password (min 8 chars)' : 'Confirm new password'}
                       value={(passwords as any)[field]}
-                      onChange={(e) => setPasswords({ ...passwords, [field]: e.target.value })}
+                      onChange={(e) => { setPasswords({ ...passwords, [field]: e.target.value }); setPasswordError(null); }}
                       className="w-full px-3 py-2 border rounded-md bg-background text-sm"
                       required
                       minLength={field === 'new' ? 8 : undefined}
                     />
                   ))}
                   <div className="flex gap-2">
-                    <Button type="submit" size="sm" disabled={isUpdating}>
-                      {isUpdating ? 'Saving...' : 'Update'}
+                    <Button type="submit" size="sm" disabled={isChangingPassword}>
+                      {isChangingPassword ? 'Saving...' : 'Update'}
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setShowPasswordForm(false)}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setShowPasswordForm(false); setPasswordError(null); setPasswordMessage(null); }}>
                       Cancel
                     </Button>
                   </div>
