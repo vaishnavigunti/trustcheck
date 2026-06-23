@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     # Example: "https://trustcheck.vercel.app,https://www.trustcheck.app"
     cors_origins: str = Field(default="")
 
+    # Trusted Host headers (TrustedHostMiddleware) — comma-separated.
+    # Empty = allow all hosts, which is safe behind a managed PaaS proxy
+    # (Render/Vercel/Railway) that already routes by host and terminates TLS.
+    # Lock down later, e.g. "trustcheck.onrender.com,api.trustcheck.app".
+    allowed_hosts: str = Field(default="")
+
     @field_validator("allowed_extensions")
     @classmethod
     def parse_allowed_extensions(cls, v: str) -> List[str]:
@@ -94,6 +100,17 @@ class Settings(BaseSettings):
         if self.is_production:
             return ["https://trustcheck.vercel.app"]
         return ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    @property
+    def trusted_hosts(self) -> List[str]:
+        """Allowed Host headers for TrustedHostMiddleware.
+
+        Defaults to ["*"] (all hosts) so platform health checks and custom
+        domains work out of the box; set ALLOWED_HOSTS to restrict.
+        """
+        if self.allowed_hosts.strip():
+            return [h.strip() for h in self.allowed_hosts.split(",") if h.strip()]
+        return ["*"]
 
     @model_validator(mode="after")
     def _validate_production_secret(self) -> "Settings":

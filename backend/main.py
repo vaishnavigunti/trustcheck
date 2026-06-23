@@ -64,10 +64,12 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
     
-    # Trusted host middleware
+    # Trusted host middleware — configurable via ALLOWED_HOSTS (defaults to all
+    # hosts, which is safe behind a managed PaaS proxy and lets platform health
+    # checks on the *.onrender.com / *.vercel.app host succeed).
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["*"] if not settings.is_production else ["*.vercel.app", "*.railway.app"],
+        allowed_hosts=settings.trusted_hosts,
     )
     
     # Security headers middleware
